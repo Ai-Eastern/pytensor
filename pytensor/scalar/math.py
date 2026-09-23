@@ -1235,16 +1235,18 @@ class Softplus(UnaryScalarOp):
         x_dtype = getattr(x, "dtype", None)
         not_int8 = x_dtype is None or x_dtype.itemsize > 1
         if x < -37.0:
-            return np.exp(x) if not_int8 else np.exp(x, signature="f")
+            return np.exp(x) if not_int8 else np.exp(x, dtype=np.float32)
         elif x < 18.0:
             return (
-                np.log1p(np.exp(x)) if not_int8 else np.log1p(np.exp(x, signature="f"))
+                np.log1p(np.exp(x))
+                if not_int8
+                else np.log1p(np.exp(x, dtype=np.float32))
             )
         elif x < 33.3:
             if x_dtype is not None and x_dtype.kind == "u":
                 # Negate uint will not do what we want
                 x = x.astype("float32" if x_dtype.itemsize <= 2 else "float64")
-            return x + np.exp(-x) if not_int8 else x + np.exp(-x, signature="f")
+            return x + np.exp(-x) if not_int8 else x + np.exp(-x, dtype=np.float32)
         else:
             return x
 
