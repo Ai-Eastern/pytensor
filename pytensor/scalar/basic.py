@@ -2884,7 +2884,7 @@ class Reciprocal(UnaryScalarOp):
     nfunc_spec = ("reciprocal", 1, 1)
 
     def impl(self, x):
-        return np.float32(1.0) / x
+        return 1.0 / x
 
     def pullback(self, inputs, outputs, gout):
         (x,) = inputs
