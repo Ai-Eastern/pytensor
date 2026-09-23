@@ -404,15 +404,12 @@ class TestUpgradeToFloat:
 
 @pytest.mark.parametrize(
     ("scalar_type", "value"),
-    [(float32, np.float32(0.657)), (float64, 0.657)],
+    [(float32, np.float32(0.657)), (float64, np.float64(0.657))],
     ids=["float32", "float64"],
 )
 def test_reciprocal_python_linker_precision(scalar_type, value):
     x = scalar_type("x")
-    # Keep Python float inputs as-is; filtering converts them to NumPy float64.
-    fn = pytensor.function(
-        [x], reciprocal(x), mode=Mode(linker="py", optimizer=None), trust_input=True
-    )
+    fn = pytensor.function([x], reciprocal(x), mode=Mode(linker="py", optimizer=None))
     np.testing.assert_array_equal(fn(value), 1.0 / value)
 
 

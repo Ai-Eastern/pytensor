@@ -785,6 +785,39 @@ def check_elemwise_runtime_broadcast(mode):
 
 
 class TestElemwise(unittest_tools.InferShapeTester):
+    @pytest.mark.parametrize("dtype", ["float32", "float64"])
+    @pytest.mark.parametrize("ndim", [0, 1])
+    def test_reciprocal_python_linker_precision(self, dtype, ndim):
+        x = tensor("x", dtype=dtype, shape=(None,) * ndim)
+        fn = function(
+            [x], [1 / x, 2.0 / x], mode=Mode(linker="py", optimizer="fast_run")
+        )
+        assert any(
+            isinstance(node.op, Elemwise)
+            and isinstance(node.op.scalar_op, ps.Composite)
+            for node in fn.maker.fgraph.toposort()
+        )
+
+        value = np.asarray(0.657 if ndim == 0 else [0.657, -0.657], dtype=dtype)
+        inverse, double_inverse = fn(value)
+        np.testing.assert_array_equal(inverse, 1.0 / value)
+        np.testing.assert_array_equal(double_inverse, 2.0 / value)
+
+    def test_python_linker_reuses_op_across_dtypes(self):
+        op = Elemwise(ps.clip)
+        x32 = vector("x32", dtype="float32")
+        x64 = vector("x64", dtype="float64")
+        fn = function(
+            [x32, x64],
+            [op(x32, -1, 1), op(x64, -1, 1)],
+            mode=Mode(linker="py", optimizer=None),
+        )
+        values = [
+            np.asarray([-2, 0.657, 2], dtype=dtype) for dtype in ("float32", "float64")
+        ]
+        for result, value in zip(fn(*values), values, strict=True):
+            np.testing.assert_array_equal(result, np.clip(value, -1, 1))
+
     def test_elemwise_grad_bool(self):
         x = scalar(dtype="bool")
         y = bscalar()
