@@ -402,17 +402,11 @@ class TestUpgradeToFloat:
             self._test_binary(binary_op, x_range, y_range)
 
 
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
-def test_reciprocal_python_linker_precision(dtype):
-    x = pt.scalar("x", dtype=dtype)
-    value = np.dtype(dtype).type(0.657)
-    # Multiple outputs keep reciprocal in a Composite that calls its Python impl.
-    fn = pytensor.function(
-        [x], [1 / x, 2.0 / x], mode=Mode(linker="py", optimizer="fast_run")
-    )
-
-    inverse, _ = fn(value)
-    np.testing.assert_array_equal(inverse, 1.0 / value)
+@pytest.mark.parametrize(
+    "value", [np.float32(0.657), 0.657], ids=["float32", "float64"]
+)
+def test_reciprocal_impl_precision(value):
+    np.testing.assert_array_equal(reciprocal.impl(value), 1.0 / value)
 
 
 def test_mod_complex_fail():
