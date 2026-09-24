@@ -805,18 +805,12 @@ class TestElemwise(unittest_tools.InferShapeTester):
 
     def test_python_linker_reuses_op_across_dtypes(self):
         op = Elemwise(ps.clip)
-        x32 = vector("x32", dtype="float32")
-        x64 = vector("x64", dtype="float64")
-        fn = function(
-            [x32, x64],
-            [op(x32, -1, 1), op(x64, -1, 1)],
-            mode=Mode(linker="py", optimizer=None),
-        )
-        values = [
-            np.asarray([-2, 0.657, 2], dtype=dtype) for dtype in ("float32", "float64")
-        ]
-        for result, value in zip(fn(*values), values, strict=True):
-            np.testing.assert_array_equal(result, np.clip(value, -1, 1))
+        # Compile float32 first so an Op-level cache would downcast float64 inputs.
+        for dtype in ("float32", "float64"):
+            x = vector("x", dtype=dtype)
+            fn = function([x], op(x, -1, 1), mode=Mode(linker="py", optimizer=None))
+            value = np.asarray([-2, 0.657, 2], dtype=dtype)
+            np.testing.assert_array_equal(fn(value), np.clip(value, -1, 1))
 
     def test_elemwise_grad_bool(self):
         x = scalar(dtype="bool")
